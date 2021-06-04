@@ -1,34 +1,33 @@
 package;
 
+import Matricies;
 import flixel.FlxG;
 import flixel.FlxState;
 import flixel.graphics.FlxGraphic;
+import flixel.math.FlxPoint;
 import flixel.math.FlxRandom;
 import flixel.system.scaleModes.RatioScaleMode;
 import flixel.text.FlxText;
 import flixel.tile.FlxBaseTilemap.FlxTilemapAutoTiling;
 import flixel.tile.FlxTilemap;
 
-function constructMatrix(construct, width, height) {
-	var matrix = [];
-	
-	for (row in 0...height) {
-		matrix[row] = [];
-		
-		for (col in 0...width) {
-			var item = construct(row, col);
-			
-			matrix[row].push(item);
-		}
-	}
+function pickRandom<T>(rand:FlxRandom, items:Array<T>) {
+	return items[rand.int(0, items.length - 1)];
+}
 
-	return matrix;
+function pickRandomWeighted<T>(rand:FlxRandom, items:Array<T>, weights:Array<Float>) {
+	return items[rand.weightedPick(weights)];
+}
+
+function convertPointToLocation(tileSize:Int, point:FlxPoint) {
+	return new Location(Math.floor(point.y / tileSize), Math.floor(point.x / tileSize));
 }
 
 class PlayState extends FlxState
 {
 	var tiles:FlxTilemap;
 	var rand:FlxRandom;
+	var tower:Tower;
 
 	override public function create()
 	{
@@ -45,6 +44,7 @@ class PlayState extends FlxState
 		var ITEM_COUNT = 20;
 		var width = 10;
 		var height = 10;
+		var bugs:Array<Int> = [13, 14, 17, 18, 27, 29];
 
 		var background = new FlxTilemap();
 		background.loadMapFrom2DArray(
@@ -52,14 +52,15 @@ class PlayState extends FlxState
 				var isEvenRow = row % 2 == 0;
 				var isEvenCol = col % 2 == 0;
 
+				// 2 color checkers
 				if (isEvenRow && isEvenCol) {
 					return 22;
 				} else if (isEvenRow && !isEvenCol) {
 					return 23;
 				} else if (!isEvenRow && isEvenCol) {
-					return 24;
+					return 23;
 				} else {
-					return 25;
+					return 22;
 				}
 			}, width, height),
 			tilesheet,
@@ -71,9 +72,15 @@ class PlayState extends FlxState
 		);
 		add(background);
 
+		var tileData = constructMatrix(
+			(row, col) -> pickRandomWeighted(rand, [0, 63, 61, 62], [80, 18, 2, 1]),
+			width,
+			height
+		);
+
 		tiles = new FlxTilemap();
 		tiles.loadMapFrom2DArray(
-			constructMatrix((row, col) -> rand.int(1, ITEM_COUNT), width, height),
+			tileData,
 			tilesheet,
 			16,
 			16,
@@ -89,5 +96,11 @@ class PlayState extends FlxState
 	override public function update(elapsed:Float)
 	{
 		super.update(elapsed);
+
+		if (FlxG.mouse.justPressed) {
+			var location = convertPointToLocation(16, FlxG.mouse.getPosition());
+			
+			trace('mouse pressed at: ' + FlxG.mouse.getPosition() + ' -> ' + location.trace());
+		}
 	}
 }

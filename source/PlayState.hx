@@ -1,6 +1,8 @@
 package;
 
 import Matricies;
+import StringTools;
+import TextRow;
 import flixel.FlxG;
 import flixel.FlxState;
 import flixel.graphics.FlxGraphic;
@@ -28,6 +30,7 @@ var TileTypes = {
 	EMPTY: 0,
 	SELECTOR: 21,
 	TREE: 63,
+	BUSH_BERRY: 64,
 	STONE: 61,
 	GOLD: 62,
 	VILLAGE: 74
@@ -37,6 +40,7 @@ var TileTypeInfo:Map<Int, Any> = [
 	TileTypes.EMPTY => 'Empty',
 	TileTypes.SELECTOR => 'Empty',
 	TileTypes.TREE => 'Tree',
+	TileTypes.BUSH_BERRY => 'Berries',
 	TileTypes.STONE => 'Stone',
 	TileTypes.GOLD => 'Gold',
 	TileTypes.VILLAGE => 'Village'
@@ -50,15 +54,18 @@ class PlayState extends FlxState
 	var rand:FlxRandom;
 	var tower:Tower;
 	var gameState:String;
+	var food:Int;
 	var gold:Int;
 	var stone:Int;
 	var wood:Int;
+	var foodText:FlxText;
 	var goldText:FlxText;
 	var stoneText:FlxText;
 	var woodText:FlxText;
 	var selected:Location = null;
 	var infoTitleText:FlxText;
 	var infoBodyTest:FlxText;
+	var resourceTextRow:TextRow;
 
 	override public function create()
 	{
@@ -75,9 +82,10 @@ class PlayState extends FlxState
 		var bugs:Array<Int> = [13, 14, 17, 18, 27, 29];
 		// placingStart, playing, placing
 		gameState = 'placingStart';
-		gold = 100;
-		wood = 100;
-		stone = 100;
+		food = 0;
+		gold = 0;
+		wood = 0;
+		stone = 0;
 
 		bgColor = new FlxColor(0xFF663931);
 
@@ -109,7 +117,7 @@ class PlayState extends FlxState
 		add(background);
 
 		var tileData = constructMatrix(
-			(row, col) -> pickRandomWeighted(rand, [TileTypes.EMPTY, TileTypes.TREE, TileTypes.STONE, TileTypes.GOLD], [80, 18, 2, 1]),
+			(row, col) -> pickRandomWeighted(rand, [TileTypes.EMPTY, TileTypes.TREE, TileTypes.BUSH_BERRY, TileTypes.STONE, TileTypes.GOLD], [75, 17, 6, 2, 1]),
 			width,
 			height
 		);
@@ -141,21 +149,18 @@ class PlayState extends FlxState
 		add(upperLayer);
 
 		// top bar
-		var textWidth = Config.instance.tileSize * 3;
-
-		goldText = new FlxText(0 * textWidth, 0, textWidth, 'G: ' + Std.string(gold));
-		goldText.borderStyle = FlxTextBorderStyle.OUTLINE;
-		add(goldText);
-
-		stoneText = new FlxText(1 * textWidth, 0, textWidth, 'S: ' + Std.string(stone));
-		stoneText.borderStyle = FlxTextBorderStyle.OUTLINE;
-		add(stoneText);
-
-		woodText = new FlxText(2 * textWidth, 0, textWidth, 'W: ' + Std.string(wood));
-		woodText.borderStyle = FlxTextBorderStyle.OUTLINE;
-		add(woodText);
+		var textWidth = Config.instance.tileSize * 2;
+	
+		resourceTextRow = new TextRow(4, textWidth, new FlxPoint(0, 0), this);
+		updateTextBar();
 
 		// bottom bar
+		var buildPanelWidth = Config.instance.tileSize * 6;
+		var buildPanelPosition = new FlxPoint(
+			0,
+			Config.instance.pixelsHigh - Config.instance.bottomMargin
+		);
+		 
 		
 		// info bar on far right
 		var infoPanelWidth = Config.instance.tileSize * 4;
@@ -178,6 +183,8 @@ class PlayState extends FlxState
 	override public function update(elapsed:Float)
 	{
 		super.update(elapsed);
+
+		updateTextBar();
 
 		if (FlxG.mouse.justPressed) {
 			var position = FlxG.mouse.getPosition();
@@ -203,5 +210,16 @@ class PlayState extends FlxState
 			var selectedTile = selected.getTile(tiles);
 			infoTitleText.text = TileTypeInfo[selectedTile];
 		}
+	}
+
+	function updateTextBar() {
+		var format = count -> StringTools.lpad(Std.string(count), '0', 2);
+		
+		resourceTextRow.updateTexts([
+			'F: ' + format(food),
+			'W: ' + format(wood),
+			'G: ' + format(gold),
+			'S: ' + format(stone)
+		]);
 	}
 }

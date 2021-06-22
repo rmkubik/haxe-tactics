@@ -31,6 +31,14 @@ class Location {
 		
 		tiles.setTile(locationXY.x, locationXY.y, value);
 	}
+
+	public function isInBounds(tiles:FlxTilemap) {
+		return this.row >= 0 && this.row < tiles.heightInTiles && this.col >= 0 && this.col < tiles.widthInTiles;
+	}
+
+	public function isEqual(other:Location) {
+		return other != null && this.row == other.row && this.col == other.col;
+	}
 }
 
 function constructMatrix(construct, width, height) {

@@ -27,7 +27,10 @@ var TileTypes = {
 	BUSH_BERRY: 64,
 	STONE: 61,
 	GOLD: 62,
-	VILLAGE: 74
+	VILLAGE: 74,
+	GRANARY: 76,
+	CAMP: 77,
+	WOODCUTTERS: 86
 }
 
 var TileTypeInfo:Map<Int, Any> = [
@@ -37,8 +40,13 @@ var TileTypeInfo:Map<Int, Any> = [
 	TileTypes.BUSH_BERRY => 'Berries',
 	TileTypes.STONE => 'Stone',
 	TileTypes.GOLD => 'Gold',
-	TileTypes.VILLAGE => 'Village'
+	TileTypes.VILLAGE => 'Village',
+	TileTypes.GRANARY => 'Granary',
+	TileTypes.CAMP => 'Camp',
+	TileTypes.WOODCUTTERS => 'Cutters'
 ];
+
+var UNSELECTED_INFO = ". . .";
 
 
 class PlayState extends FlxState
@@ -76,8 +84,8 @@ class PlayState extends FlxState
 		var width = Config.instance.tilesWide;
 		var height = Config.instance.tilesHigh;
 
-		// placingStart, playing, placing
-		gameState = 'placingStart';
+		// playing, placing
+		gameState = 'playing';
 		food = 0;
 		gold = 0;
 		wood = 0;
@@ -90,16 +98,22 @@ class PlayState extends FlxState
 			tilesheet,
 			this,
 			(location) -> {
-				if (gameState == 'placingStart') {
-					location.setTile(grid.layers[TILES_LAYER], TileTypes.VILLAGE);
-					gameState = 'playing';
-				} else if (gameState == 'playing') {
-					if (selected != null) {
-						selected.setTile(grid.layers[UPPER_LAYER], TileTypes.EMPTY);
-					}
-					
-					selected = location;
+				if (!location.isInBounds(grid.layers[0])) {
+					return;
 				}
+
+				clearSelectors();
+
+				if (gameState == 'placing') {
+					var newTile = selected.getTile(buildGrid.layers[0]);
+					location.setTile(grid.layers[TILES_LAYER], newTile);
+					
+					gameState = 'playing';
+				} else if (gameState == 'playing') {					
+
+				}
+
+				select(location);
 			}
 		);
 
@@ -137,13 +151,32 @@ class PlayState extends FlxState
 		updateTextBar();
 
 		// bottom bar
-		var buildPanelWidth = Config.instance.tileSize * 6;
 		var buildPanelPosition = new FlxPoint(
 			0,
 			Config.instance.pixelsHigh - Config.instance.bottomMargin
 		);
-		
-		 
+		buildGrid = new Grid(
+			buildPanelPosition,
+			tilesheet,
+			this,
+			location -> {
+				if (!location.isInBounds(buildGrid.layers[0])) {
+					return;
+				}
+
+				clearSelectors();
+
+				gameState = 'placing';	
+				
+				select(location);
+			}
+		);
+		buildGrid.createLayer([
+			[TileTypes.VILLAGE, TileTypes.GRANARY, TileTypes.CAMP, TileTypes.WOODCUTTERS]
+		]);
+		buildGrid.createLayer([
+			[0, 0, 0, 0]
+		]);
 		
 		// info bar on far right
 		var infoPanelWidth = Config.instance.tileSize * 4;
@@ -155,7 +188,7 @@ class PlayState extends FlxState
 			infoPanelPosition.x,
 			infoPanelPosition.y,
 			infoPanelWidth,
-			". . ."
+			UNSELECTED_INFO
 		);
 		infoTitleText.borderStyle = FlxTextBorderStyle.OUTLINE;
 		add(infoTitleText);
@@ -170,13 +203,7 @@ class PlayState extends FlxState
 		updateTextBar();
 
 		grid.update();
-
-		if (selected != null) {
-			selected.setTile(grid.layers[UPPER_LAYER], TileTypes.SELECTOR);
-
-			var selectedTile = selected.getTile(grid.layers[TILES_LAYER]);
-			infoTitleText.text = TileTypeInfo[selectedTile];
-		}
+		buildGrid.update();
 	}
 
 	function updateTextBar() {
@@ -188,5 +215,45 @@ class PlayState extends FlxState
 			'G: ' + format(gold),
 			'S: ' + format(stone)
 		]);
+	}
+
+	function clearSelectors() {
+		if (selected != null) {
+			// clear old selections
+			if (selected.isInBounds(grid.layers[UPPER_LAYER])) {
+				selected.setTile(grid.layers[UPPER_LAYER], TileTypes.EMPTY);
+			}
+
+			if (selected.isInBounds(buildGrid.layers[1])) {
+				selected.setTile(buildGrid.layers[1], TileTypes.EMPTY);
+			}
+		}
+	}
+
+	function select(location:Location) {
+		// de-select exisiting selection
+		if (location.isEqual(selected)) {
+			selected = null;
+		} else {
+			selected = location;
+		}
+
+		// update info
+		if (selected != null) {
+			// render selections
+			if (gameState == 'playing') {
+				selected.setTile(grid.layers[UPPER_LAYER], TileTypes.SELECTOR);
+	
+				var selectedTile = selected.getTile(grid.layers[TILES_LAYER]);
+				infoTitleText.text = TileTypeInfo[selectedTile];
+			} else if (gameState == 'placing') {
+				selected.setTile(buildGrid.layers[1], TileTypes.SELECTOR);
+	
+				var selectedTile = selected.getTile(buildGrid.layers[0]);
+				infoTitleText.text = TileTypeInfo[selectedTile];
+			}
+		} else {
+			infoTitleText.text = UNSELECTED_INFO;
+		}
 	}
 }

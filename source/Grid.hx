@@ -6,8 +6,11 @@ import flixel.math.FlxPoint;
 import flixel.tile.FlxBaseTilemap.FlxTilemapAutoTiling;
 import flixel.tile.FlxTilemap;
 
-function convertPointToLocation(tileSize:Int, point:FlxPoint) {
-	return new Location(Math.floor((point.y - Config.instance.topMargin) / tileSize), Math.floor(point.x / tileSize));
+function convertPointToLocation(point:FlxPoint, gridPosition:FlxPoint) {
+  return new Location(
+    Math.floor((point.y - gridPosition.y) / Config.instance.tileSize),
+    Math.floor((point.x - gridPosition.x) / Config.instance.tileSize)
+  );
 }
 
 class Grid {
@@ -44,11 +47,9 @@ class Grid {
 
   public function update() {
     if (FlxG.mouse.justPressed) {
-			var position = FlxG.mouse.getPosition();
-			var location = convertPointToLocation(Config.instance.tileSize, position);
+			var mousePosition = FlxG.mouse.getPosition();
+			var location = convertPointToLocation(mousePosition, this.position);
 			
-			trace('mouse pressed at: ' + position + ' -> ' + location.trace());
-
       onClick(location);
 		}
   }

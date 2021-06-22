@@ -240,6 +240,22 @@ class PlayState extends FlxState
 			}, width, height)	
 		);
 
+		// set starting village
+		var startingVillage = new Location(
+			rand.int(0, width - 1),
+			rand.int(0, height - 1)
+		);
+
+		trace(startingVillage);
+
+		// TODO: this should be refactored somewhere else reusuable...
+		var startingFogRemovals = createDiamond(startingVillage, 2);
+		for (location in startingFogRemovals) {
+			location.setTile(grid.layers[FOG_LAYER], 0);
+		}
+
+		startingVillage.setTile(grid.layers[TILES_LAYER], TileTypes.VILLAGE);
+
 		// top bar
 		var textWidth = Config.instance.tileSize * 2;
 	

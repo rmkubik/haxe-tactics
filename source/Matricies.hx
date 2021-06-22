@@ -1,3 +1,5 @@
+import Arrays.removeDuplicates;
+import Arrays.some;
 import flixel.tile.FlxTilemap;
 
 class Location {
@@ -39,6 +41,10 @@ class Location {
 	public function isEqual(other:Location) {
 		return other != null && this.row == other.row && this.col == other.col;
 	}
+
+	public function add(other:Location) {
+		return new Location(row + other.row, col + other.col);
+	}
 }
 
 function constructMatrix(construct, width, height) {
@@ -55,4 +61,45 @@ function constructMatrix(construct, width, height) {
 	}
 
 	return matrix;
+}
+
+// ex. radius == 2
+// . . x . .
+// . x x x .
+// x x x x x
+// . x x x .
+// . . x . .
+function createDiamond(origin:Location, radius:Int) {
+	var locations:Array<Location> = [];
+
+	for (depth in 0...radius + 1) {
+    // top of diamond
+    locations.push(new Location(origin.row + (-radius + depth), origin.col));
+    // bottom of diamond
+    locations.push(new Location(origin.row + (radius - depth), origin.col));
+
+		if (depth == 0) {
+			// only add additional columns after the peak
+			continue;
+		}
+
+		for (layerWidth in 1...depth + 1) {
+      // top rows of diamond
+      locations.push(
+        new Location(origin.row + (-radius + depth), origin.col + layerWidth)
+      );
+			locations.push(
+				new Location(origin.row + (-radius + depth), origin.col - layerWidth)
+			);
+      //bottom rows of diamond
+      locations.push(
+        new Location(origin.row + (radius - depth), origin.col + layerWidth)
+      );
+			locations.push(
+				new Location(origin.row + (radius - depth), origin.col - layerWidth)
+			);
+    }
+	}
+
+	return removeDuplicates((a:Location, b:Location) -> a.isEqual(b), locations);
 }

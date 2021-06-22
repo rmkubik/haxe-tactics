@@ -33,18 +33,95 @@ var TileTypes = {
 	WOODCUTTERS: 86
 }
 
-var TileTypeInfo:Map<Int, Any> = [
-	TileTypes.EMPTY => 'Empty',
-	TileTypes.SELECTOR => 'Empty',
-	TileTypes.TREE => 'Tree',
-	TileTypes.BUSH_BERRY => 'Berries',
-	TileTypes.STONE => 'Stone',
-	TileTypes.GOLD => 'Gold',
-	TileTypes.VILLAGE => 'Village',
-	TileTypes.GRANARY => 'Granary',
-	TileTypes.CAMP => 'Camp',
-	TileTypes.WOODCUTTERS => 'Cutters'
+typedef Cost = {
+	?wood:Int,
+	?food:Int,
+	?stone:Int,
+	?gold:Int,
+}
+
+typedef TileInfo = {
+	name:String, 
+	?cost: Cost
+}
+
+var TileTypeInfo:Map<Int, TileInfo> = [
+	TileTypes.EMPTY => {
+		name: 'Empty',
+	},
+	TileTypes.SELECTOR => {
+		name: 'Empty',
+	},
+	TileTypes.TREE => {
+		name: 'Tree',
+	},
+	TileTypes.BUSH_BERRY => {
+		name: 'Berries',
+	},
+	TileTypes.STONE => {
+		name: 'Stone',
+	},
+	TileTypes.GOLD => {
+		name: 'Gold',
+	},
+	TileTypes.VILLAGE => {
+		name: 'Village',
+		cost: {
+			food: 10,
+			wood: 10,
+		}
+	},
+	TileTypes.GRANARY => {
+		name: 'Granary',
+		cost: {
+			wood: 10,
+		}
+	},
+	TileTypes.CAMP => {
+		name: 'Camp',
+		cost: {
+			wood: 10,
+		}
+	},
+	TileTypes.WOODCUTTERS => {
+		name: 'Cutters',
+		cost: {
+			wood: 10,
+		}
+	},
 ];
+
+function computeCostString(tileInfo:TileInfo) {
+	var cost = tileInfo.cost;
+
+	if (cost == null) {
+		return 'Free';
+	}
+
+	var string = '';
+
+	if (cost.food != null) {
+		string += 'F: ' + cost.food + " ";
+	}
+
+	if (cost.wood != null) {
+		string += 'W: ' + cost.wood + " ";
+	}
+
+	if (cost.gold != null) {
+		string += 'G: ' + cost.gold + " ";
+	}
+
+	if (cost.stone != null) {
+		string += 'S: ' + cost.stone + " ";
+	}
+
+	if (string == '') {
+		return 'Free';
+	}
+
+	return string;
+}
 
 var UNSELECTED_INFO = ". . .";
 
@@ -58,6 +135,7 @@ class PlayState extends FlxState
 	var BACKGROUND_LAYER = 0;
 	var TILES_LAYER = 1;
 	var UPPER_LAYER = 2;
+	var FOG_LAYER = 3;
 
 	var food:Int;
 	var gold:Int;
@@ -69,7 +147,7 @@ class PlayState extends FlxState
 	var selected:Location = null;
 	
 	var infoTitleText:FlxText;
-	var infoBodyTest:FlxText;
+	var infoDescriptionText:FlxText;
 	var buildGrid:Grid;
 
 	override public function create()
@@ -144,6 +222,24 @@ class PlayState extends FlxState
 		
 		grid.createLayer(constructMatrix((row, col) -> 0, width, height));
 
+		grid.createLayer(
+			constructMatrix((row, col) -> {
+				var isEvenRow = row % 2 == 0;
+				var isEvenCol = col % 2 == 0;
+
+				// 2 color checkers
+				if (isEvenRow && isEvenCol) {
+					return 53;
+				} else if (isEvenRow && !isEvenCol) {
+					return 54;
+				} else if (!isEvenRow && isEvenCol) {
+					return 54;
+				} else {
+					return 53;
+				}
+			}, width, height)	
+		);
+
 		// top bar
 		var textWidth = Config.instance.tileSize * 2;
 	
@@ -192,6 +288,16 @@ class PlayState extends FlxState
 		);
 		infoTitleText.borderStyle = FlxTextBorderStyle.OUTLINE;
 		add(infoTitleText);
+		
+		infoDescriptionText = new FlxText(
+			infoPanelPosition.x,
+			infoPanelPosition.y + Config.instance.tileSize,
+			infoPanelWidth,
+			UNSELECTED_INFO
+		);
+		infoDescriptionText.borderStyle = FlxTextBorderStyle.OUTLINE;
+		add(infoDescriptionText);
+
 
 		FlxG.scaleMode = new RatioScaleMode();
 	}
@@ -234,6 +340,8 @@ class PlayState extends FlxState
 		// de-select exisiting selection
 		if (location.isEqual(selected)) {
 			selected = null;
+			// return to playing state
+			gameState = 'playing';
 		} else {
 			selected = location;
 		}
@@ -245,15 +353,17 @@ class PlayState extends FlxState
 				selected.setTile(grid.layers[UPPER_LAYER], TileTypes.SELECTOR);
 	
 				var selectedTile = selected.getTile(grid.layers[TILES_LAYER]);
-				infoTitleText.text = TileTypeInfo[selectedTile];
+				infoTitleText.text = TileTypeInfo[selectedTile].name;
 			} else if (gameState == 'placing') {
 				selected.setTile(buildGrid.layers[1], TileTypes.SELECTOR);
 	
 				var selectedTile = selected.getTile(buildGrid.layers[0]);
-				infoTitleText.text = TileTypeInfo[selectedTile];
+				infoTitleText.text = TileTypeInfo[selectedTile].name;
+				infoDescriptionText.text = computeCostString(TileTypeInfo[selectedTile]);
 			}
 		} else {
 			infoTitleText.text = UNSELECTED_INFO;
+			infoDescriptionText.text = UNSELECTED_INFO;
 		}
 	}
 }

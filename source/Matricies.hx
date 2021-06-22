@@ -63,6 +63,31 @@ function constructMatrix(construct, width, height) {
 	return matrix;
 }
 
+function forEachMatrix(sideEffect: (location:Location) -> Void, matrix:Array<Array<Any>>): Void {
+	var width = matrix.length;
+	var height = matrix[0].length;
+	
+	for (row in 0...height) {		
+		for (col in 0...width) {
+			sideEffect(new Location(row, col));
+		}
+	}
+}
+
+function covertArrayToMatrix<T>(array:Array<T>, width): Array<Array<T>> {
+	var matrix = [];
+
+	var numberOfRows = Math.floor(array.length / width);
+
+	for (row in 0...numberOfRows) {
+		var startingIndex = row * width;
+		
+		matrix[row] = array.slice(startingIndex, startingIndex + width);
+	}
+
+	return matrix;
+}
+
 // ex. radius == 2
 // . . x . .
 // . x x x .

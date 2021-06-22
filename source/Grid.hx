@@ -53,4 +53,11 @@ class Grid {
       onClick(location);
 		}
   }
+
+  public function getDimensions(): { width:Int, height:Int } {
+    return {
+      width: layers[0].widthInTiles,
+      height: layers[0].heightInTiles
+    }
+  }
 }

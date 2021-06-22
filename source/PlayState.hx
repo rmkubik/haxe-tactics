@@ -1,5 +1,6 @@
 package;
 
+import Arrays.some;
 import Matricies;
 import StringTools;
 import TextRow;
@@ -27,6 +28,7 @@ var TileTypes = {
 	BUSH_BERRY: 64,
 	STONE: 61,
 	GOLD: 62,
+	TOWER: 72,
 	VILLAGE: 74,
 	GRANARY: 76,
 	CAMP: 77,
@@ -42,7 +44,8 @@ typedef Cost = {
 
 typedef TileInfo = {
 	name:String, 
-	?cost: Cost
+	?cost: Cost,
+	?range: Int
 }
 
 var TileTypeInfo:Map<Int, TileInfo> = [
@@ -64,30 +67,41 @@ var TileTypeInfo:Map<Int, TileInfo> = [
 	TileTypes.GOLD => {
 		name: 'Gold',
 	},
+	TileTypes.TOWER => {
+		name: "Tower",
+		cost: {
+			stone: 10,
+		},
+		range: 3
+	},
 	TileTypes.VILLAGE => {
 		name: 'Village',
 		cost: {
 			food: 10,
 			wood: 10,
-		}
+		},
+		range: 2
 	},
 	TileTypes.GRANARY => {
 		name: 'Granary',
 		cost: {
 			wood: 10,
-		}
+		},
+		range: 1
 	},
 	TileTypes.CAMP => {
 		name: 'Camp',
 		cost: {
 			wood: 10,
-		}
+		},
+		range: 1
 	},
 	TileTypes.WOODCUTTERS => {
-		name: 'Cutters',
+		name: 'Choppers',
 		cost: {
 			wood: 10,
-		}
+		},
+		range: 1
 	},
 ];
 
@@ -149,6 +163,8 @@ class PlayState extends FlxState
 	var infoTitleText:FlxText;
 	var infoDescriptionText:FlxText;
 	var buildGrid:Grid;
+	var buildings:Array<Int> = [TileTypes.VILLAGE, TileTypes.GRANARY, TileTypes.CAMP, TileTypes.WOODCUTTERS, TileTypes.TOWER];
+
 
 	override public function create()
 	{
@@ -185,6 +201,8 @@ class PlayState extends FlxState
 				if (gameState == 'placing') {
 					var newTile = selected.getTile(buildGrid.layers[0]);
 					location.setTile(grid.layers[TILES_LAYER], newTile);
+
+					clearFog();
 					
 					gameState = 'playing';
 				} else if (gameState == 'playing') {					
@@ -246,15 +264,9 @@ class PlayState extends FlxState
 			rand.int(0, height - 1)
 		);
 
-		trace(startingVillage);
-
-		// TODO: this should be refactored somewhere else reusuable...
-		var startingFogRemovals = createDiamond(startingVillage, 2);
-		for (location in startingFogRemovals) {
-			location.setTile(grid.layers[FOG_LAYER], 0);
-		}
-
 		startingVillage.setTile(grid.layers[TILES_LAYER], TileTypes.VILLAGE);
+
+		clearFog();
 
 		// top bar
 		var textWidth = Config.instance.tileSize * 2;
@@ -283,12 +295,9 @@ class PlayState extends FlxState
 				select(location);
 			}
 		);
-		buildGrid.createLayer([
-			[TileTypes.VILLAGE, TileTypes.GRANARY, TileTypes.CAMP, TileTypes.WOODCUTTERS]
-		]);
-		buildGrid.createLayer([
-			[0, 0, 0, 0]
-		]);
+
+		buildGrid.createLayer([buildings]);
+		buildGrid.createLayer([buildings.map(a -> 0)]);
 		
 		// info bar on far right
 		var infoPanelWidth = Config.instance.tileSize * 4;
@@ -380,6 +389,44 @@ class PlayState extends FlxState
 		} else {
 			infoTitleText.text = UNSELECTED_INFO;
 			infoDescriptionText.text = UNSELECTED_INFO;
+		}
+	}
+
+	function clearFog() {
+		// TODO: this should be refactored somewhere else reusuable...
+		// var startingFogRemovals = createDiamond(startingVillage, 2);
+		// for (location in startingFogRemovals) {
+		// 	location.setTile(grid.layers[FOG_LAYER], 0);
+		// }
+
+		var dimensions = grid.getDimensions();
+		var tileData = grid.layers[TILES_LAYER].getData();
+		var matrix = covertArrayToMatrix(tileData, dimensions.width);
+		
+		var buildingLocations = [];
+		
+		forEachMatrix(location -> {
+			if (some(building -> building == location.getTile(grid.layers[TILES_LAYER]), buildings)) {
+				buildingLocations.push(location);
+			}
+		}, matrix);
+
+		var buildingRanges = [];
+
+		// find radius around each building
+		for (buildingLocation in buildingLocations) {
+			var building = buildingLocation.getTile(grid.layers[TILES_LAYER]);
+			var range = TileTypeInfo[building].range;
+			var tilesInRange = createDiamond(buildingLocation, range);
+
+			buildingRanges.push(tilesInRange);
+		}
+
+		// set each location as cleared
+		for (ranges in buildingRanges) {
+			for (location in ranges) {
+				location.setTile(grid.layers[FOG_LAYER], 0);
+			}
 		}
 	}
 }

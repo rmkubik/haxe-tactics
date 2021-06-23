@@ -43,9 +43,16 @@ typedef Cost = {
 }
 
 typedef TileInfo = {
-	name:String, 
+	name: String, 
 	?cost: Cost,
-	?range: Int
+	?range: {
+		value: Int,
+		shape: String,
+	},
+	?resource: {
+		type: String,
+		value: Int
+	}
 }
 
 var TileTypeInfo:Map<Int, TileInfo> = [
@@ -57,22 +64,41 @@ var TileTypeInfo:Map<Int, TileInfo> = [
 	},
 	TileTypes.TREE => {
 		name: 'Tree',
+		resource: {
+			value: 10,
+			type: 'wood'
+		} 
 	},
 	TileTypes.BUSH_BERRY => {
 		name: 'Berries',
+		resource: {
+			value: 5,
+			type: 'food'
+		} 
 	},
 	TileTypes.STONE => {
 		name: 'Stone',
+		resource: {
+			value: 20,
+			type: 'stone'
+		} 
 	},
 	TileTypes.GOLD => {
 		name: 'Gold',
+		resource: {
+			value: 20,
+			type: 'gold'
+		} 
 	},
 	TileTypes.TOWER => {
 		name: "Tower",
 		cost: {
 			stone: 10,
 		},
-		range: 3
+		range: {
+			value: 3,
+			shape: 'diamond'
+		}
 	},
 	TileTypes.VILLAGE => {
 		name: 'Village',
@@ -80,32 +106,44 @@ var TileTypeInfo:Map<Int, TileInfo> = [
 			food: 10,
 			wood: 10,
 		},
-		range: 2
+		range: {
+			value: 2,
+			shape: 'diamond',
+		}
 	},
 	TileTypes.GRANARY => {
 		name: 'Granary',
 		cost: {
 			wood: 10,
 		},
-		range: 1
+		range: {
+			value: 1,
+			shape: 'square'
+		}
 	},
 	TileTypes.CAMP => {
 		name: 'Camp',
 		cost: {
 			wood: 10,
 		},
-		range: 1
+		range: {
+			value: 1,
+			shape: 'square'
+		}
 	},
 	TileTypes.WOODCUTTERS => {
 		name: 'Choppers',
 		cost: {
 			wood: 10,
 		},
-		range: 1
+		range: {
+			value: 1,
+			shape: 'square'
+		}
 	},
 ];
 
-function computeCostString(tileInfo:TileInfo) {
+function computeCostString(tileInfo:TileInfo): String {
 	var cost = tileInfo.cost;
 
 	if (cost == null) {
@@ -137,13 +175,31 @@ function computeCostString(tileInfo:TileInfo) {
 	return string;
 }
 
+function computeResourceString(tileInfo:TileInfo): String {
+	var resource = tileInfo.resource;
+
+	if (resource == null) {
+		return UNSELECTED_INFO;
+	}
+
+	var resourceStrings = [
+		'food' => 'F',
+		'wood' => 'W',
+		'gold' => 'G',
+		'stone' => 'S'
+	];
+
+	return resourceStrings[resource.type] + ': ' + resource.value;
+}
+
 var UNSELECTED_INFO = ". . .";
 
 
 class PlayState extends FlxState
 {
 	var rand:FlxRandom;
-	var gameState:String;
+	// playing, placing
+	var gameState:String = 'playing';
 	
 	var grid:Grid;
 	var BACKGROUND_LAYER = 0;
@@ -151,10 +207,10 @@ class PlayState extends FlxState
 	var UPPER_LAYER = 2;
 	var FOG_LAYER = 3;
 
-	var food:Int;
-	var gold:Int;
-	var stone:Int;
-	var wood:Int;
+	var food:Int = 10;
+	var gold:Int = 10;
+	var stone:Int = 10;
+	var wood:Int = 10;
 
 	var resourceTextRow:TextRow;
 	
@@ -177,13 +233,6 @@ class PlayState extends FlxState
 
 		var width = Config.instance.tilesWide;
 		var height = Config.instance.tilesHigh;
-
-		// playing, placing
-		gameState = 'playing';
-		food = 0;
-		gold = 0;
-		wood = 0;
-		stone = 0;
 
 		bgColor = new FlxColor(0xFF663931);
 
@@ -379,6 +428,7 @@ class PlayState extends FlxState
 	
 				var selectedTile = selected.getTile(grid.layers[TILES_LAYER]);
 				infoTitleText.text = TileTypeInfo[selectedTile].name;
+				infoDescriptionText.text = computeResourceString(TileTypeInfo[selectedTile]);
 			} else if (gameState == 'placing') {
 				selected.setTile(buildGrid.layers[1], TileTypes.SELECTOR);
 	
@@ -413,11 +463,16 @@ class PlayState extends FlxState
 
 		var buildingRanges = [];
 
+		var rangeFinders = [
+			'diamond' => createDiamond,
+			'square' => createSquare
+		];
+
 		// find radius around each building
 		for (buildingLocation in buildingLocations) {
 			var building = buildingLocation.getTile(grid.layers[TILES_LAYER]);
 			var range = TileTypeInfo[building].range;
-			var tilesInRange = createDiamond(buildingLocation, range);
+			var tilesInRange = rangeFinders[range.shape](buildingLocation, range.value);
 
 			buildingRanges.push(tilesInRange);
 		}

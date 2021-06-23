@@ -1,5 +1,4 @@
 import Arrays.removeDuplicates;
-import Arrays.some;
 import flixel.tile.FlxTilemap;
 
 class Location {
@@ -94,7 +93,7 @@ function covertArrayToMatrix<T>(array:Array<T>, width): Array<Array<T>> {
 // x x x x x
 // . x x x .
 // . . x . .
-function createDiamond(origin:Location, radius:Int) {
+function createDiamond(origin:Location, radius:Int): Array<Location> {
 	var locations:Array<Location> = [];
 
 	for (depth in 0...radius + 1) {
@@ -127,4 +126,33 @@ function createDiamond(origin:Location, radius:Int) {
 	}
 
 	return removeDuplicates((a:Location, b:Location) -> a.isEqual(b), locations);
+}
+
+// ex. radius == 1
+// . . . . .
+// . x x x .
+// . x x x .
+// . x x x .
+// . . . . .
+function createSquare(origin:Location, radius:Int): Array<Location> {
+	var locations:Array<Location> = [];
+
+	for (rowAdjust in 0...radius + 1) {
+		for (colAdjust in 0...radius + 1) {
+			locations.push(
+				new Location(origin.row - rowAdjust, origin.col + colAdjust)
+			);
+			locations.push(
+				new Location(origin.row + rowAdjust, origin.col + colAdjust)
+			);
+			locations.push(
+				new Location(origin.row + rowAdjust, origin.col - colAdjust)
+			);
+			locations.push(
+				new Location(origin.row - rowAdjust, origin.col - colAdjust)
+			);
+		}	
+	}
+
+  return removeDuplicates((a:Location, b:Location) -> a.isEqual(b), locations);
 }

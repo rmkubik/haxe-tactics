@@ -248,11 +248,14 @@ class PlayState extends FlxState
 				clearSelectors();
 
 				if (gameState == 'placing') {
-					var newTile = selected.getTile(buildGrid.layers[0]);
-					location.setTile(grid.layers[TILES_LAYER], newTile);
+					// var newTile = selected.getTile(buildGrid.layers[0]);
+					// location.setTile(grid.layers[TILES_LAYER], newTile);
 
-					clearFog();
+					// clearFog();
 					
+					// gameState = 'playing';
+					if (tryPlaceBuilding(location)) {
+					}
 					gameState = 'playing';
 				} else if (gameState == 'playing') {					
 
@@ -419,11 +422,18 @@ class PlayState extends FlxState
 		} else {
 			selected = location;
 		}
-
+		
 		// update info
 		if (selected != null) {
 			// render selections
 			if (gameState == 'playing') {
+				var fogTile = selected.getTile(grid.layers[FOG_LAYER]);
+				if (fogTile != TileTypes.EMPTY) {
+					infoTitleText.text = "Fogged";
+					infoDescriptionText.text = UNSELECTED_INFO;
+					return;
+				}
+
 				selected.setTile(grid.layers[UPPER_LAYER], TileTypes.SELECTOR);
 	
 				var selectedTile = selected.getTile(grid.layers[TILES_LAYER]);
@@ -433,6 +443,7 @@ class PlayState extends FlxState
 				selected.setTile(buildGrid.layers[1], TileTypes.SELECTOR);
 	
 				var selectedTile = selected.getTile(buildGrid.layers[0]);
+
 				infoTitleText.text = TileTypeInfo[selectedTile].name;
 				infoDescriptionText.text = computeCostString(TileTypeInfo[selectedTile]);
 			}
@@ -442,13 +453,93 @@ class PlayState extends FlxState
 		}
 	}
 
-	function clearFog() {
-		// TODO: this should be refactored somewhere else reusuable...
-		// var startingFogRemovals = createDiamond(startingVillage, 2);
-		// for (location in startingFogRemovals) {
-		// 	location.setTile(grid.layers[FOG_LAYER], 0);
-		// }
+	function tryPlaceBuilding(location:Location): Bool {
+		// is location valid
+		var currentFogTile = location.getTile(grid.layers[FOG_LAYER]);
 
+		if (currentFogTile != TileTypes.EMPTY) {
+			trace('fogged');
+			return false;
+		}
+
+		var currentTile = location.getTile(grid.layers[TILES_LAYER]);
+		if (currentTile != TileTypes.EMPTY) {
+			trace('occupied');
+			return false;
+		}
+
+		var newTile = selected.getTile(buildGrid.layers[0]);
+		var tileInfo = TileTypeInfo[newTile];
+
+		if (!canAfford(tileInfo)) {
+			trace('too expensive');
+			return false;
+		}
+
+		location.setTile(grid.layers[TILES_LAYER], newTile);
+
+		clearFog();
+		
+		removeCost(tileInfo);
+		
+		return true;
+	}
+
+	function canAfford(tileInfo: TileInfo): Bool {
+		var canAfford = true;
+		var cost = tileInfo.cost;
+
+		if (cost == null) {
+			return true;
+		}
+		
+		if (cost.food != null && cost.food > food) {
+			canAfford = false;
+		}
+
+		if (cost.wood != null && cost.wood > wood) {
+			canAfford = false;
+		}
+
+		if (cost.gold != null && cost.gold > gold) {
+			canAfford = false;
+		}
+
+		if (cost.stone != null && cost.stone > stone) {
+			canAfford = false;
+		}
+
+		return canAfford;
+	}
+
+	function removeCost(tileInfo:TileInfo): Void {
+		var cost = tileInfo.cost;
+
+		trace(tileInfo);
+		trace(cost);
+
+		if (cost == null) {
+			return;
+		}
+		
+		if (cost.food != null) {
+			food -= cost.food;
+		}
+
+		if (cost.wood != null) {
+			wood -= cost.wood;
+		}
+
+		if (cost.gold != null) {
+			gold -= cost.gold;
+		}
+
+		if (cost.stone != null) {
+			stone -= cost.stone;
+		}
+	}
+
+	function clearFog() {
 		var dimensions = grid.getDimensions();
 		var tileData = grid.layers[TILES_LAYER].getData();
 		var matrix = covertArrayToMatrix(tileData, dimensions.width);
@@ -480,7 +571,7 @@ class PlayState extends FlxState
 		// set each location as cleared
 		for (ranges in buildingRanges) {
 			for (location in ranges) {
-				location.setTile(grid.layers[FOG_LAYER], 0);
+				location.setTile(grid.layers[FOG_LAYER], TileTypes.EMPTY);
 			}
 		}
 	}

@@ -1,7 +1,7 @@
 import Arrays.removeDuplicates;
 import flixel.tile.FlxTilemap;
 
-class Location {
+class Location { 
 	public var row:Int;
 	public var col:Int;
 

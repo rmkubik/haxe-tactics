@@ -21,7 +21,7 @@ function pickRandomWeighted<T>(rand:FlxRandom, items:Array<T>, weights:Array<Flo
 	return items[rand.weightedPick(weights)];
 }
 
-function getLocationsInRange(origin:Location, range:Range) {
+function getLocationsInRange(origin:Location, range:Range): Array<Location> {
 	var rangeFinders = [
 		Shape.DIAMOND => createDiamond,
 		Shape.SQUARE => createSquare
@@ -513,6 +513,7 @@ class PlayState extends FlxState
 		removeCost(tileInfo);
 
 		// do on place effect
+		harvest(location, TileTypeInfo[TileTypes.WOODCUTTERS].range, [TileTypes.TREE]);
 		
 		return true;
 	}
@@ -522,9 +523,19 @@ class PlayState extends FlxState
 		// targets == array of tile types
 		// range == radius + shape
 
-		// find all locations in range or origin
+		// find all locations in range of origin
+		var locations:Array<Location> = getLocationsInRange(origin, range);
+
 		// find tiles in those locations that match one of the targets
+		var targetLocations = locations.filter(location -> {
+			var tile = location.getTile(grid.layers[TILES_LAYER]);
+			return targets.contains(tile);
+		});
+
+		trace(targetLocations);
+
 		// add resource values of the found tiles to current totals
+
 		// replace target location with new decomposition tile (e.g. EMPTY for now, but maybe STUMP in the future)
 	}
 

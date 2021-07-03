@@ -4,7 +4,11 @@
     {
       "type": "lime",
       "command": "test",
-      "group": "test"
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "label": "lime: test (active configuration)"
     },
     {
       "type": "lime",

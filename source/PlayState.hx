@@ -21,6 +21,15 @@ function pickRandomWeighted<T>(rand:FlxRandom, items:Array<T>, weights:Array<Flo
 	return items[rand.weightedPick(weights)];
 }
 
+function getLocationsInRange(origin:Location, range:Range) {
+	var rangeFinders = [
+		Shape.DIAMOND => createDiamond,
+		Shape.SQUARE => createSquare
+	];
+	
+	return rangeFinders[range.shape](origin, range.value);
+}
+
 var TileTypes = {
 	EMPTY: 0,
 	SELECTOR: 21,
@@ -45,14 +54,25 @@ typedef Cost = {
 typedef TileInfo = {
 	name: String, 
 	?cost: Cost,
-	?range: {
-		value: Int,
-		shape: String,
-	},
+	?range: Range,
 	?resource: {
 		type: String,
 		value: Int
+	},
+	?effect: {
+		func: String,
+		?args: Array<Any>
 	}
+}
+
+enum Shape {
+	SQUARE;
+	DIAMOND;
+}
+
+typedef Range = {
+	value: Int,
+	shape: Shape
 }
 
 var TileTypeInfo:Map<Int, TileInfo> = [
@@ -97,7 +117,7 @@ var TileTypeInfo:Map<Int, TileInfo> = [
 		},
 		range: {
 			value: 3,
-			shape: 'diamond'
+			shape: Shape.DIAMOND
 		}
 	},
 	TileTypes.VILLAGE => {
@@ -108,7 +128,7 @@ var TileTypeInfo:Map<Int, TileInfo> = [
 		},
 		range: {
 			value: 2,
-			shape: 'diamond',
+			shape: Shape.DIAMOND,
 		}
 	},
 	TileTypes.GRANARY => {
@@ -118,7 +138,7 @@ var TileTypeInfo:Map<Int, TileInfo> = [
 		},
 		range: {
 			value: 1,
-			shape: 'square'
+			shape: Shape.SQUARE
 		}
 	},
 	TileTypes.CAMP => {
@@ -128,7 +148,7 @@ var TileTypeInfo:Map<Int, TileInfo> = [
 		},
 		range: {
 			value: 1,
-			shape: 'square'
+			shape: Shape.SQUARE
 		}
 	},
 	TileTypes.WOODCUTTERS => {
@@ -138,7 +158,17 @@ var TileTypeInfo:Map<Int, TileInfo> = [
 		},
 		range: {
 			value: 1,
-			shape: 'square'
+			shape: Shape.SQUARE
+		},
+		effect: {
+			func: 'harvest',
+			args: [
+				{
+					value: 1,
+					shape: Shape.SQUARE
+				},
+				[TileTypes.TREE]
+			]
 		}
 	},
 ];
@@ -204,8 +234,8 @@ class PlayState extends FlxState
 	var grid:Grid;
 	var BACKGROUND_LAYER = 0;
 	var TILES_LAYER = 1;
-	var UPPER_LAYER = 2;
-	var FOG_LAYER = 3;
+	var FOG_LAYER = 2;
+	var UPPER_LAYER = 3;
 
 	var food:Int = 10;
 	var gold:Int = 10;
@@ -290,8 +320,6 @@ class PlayState extends FlxState
 		);
 		grid.createLayer(tileData);
 		
-		grid.createLayer(constructMatrix((row, col) -> 0, width, height));
-
 		grid.createLayer(
 			constructMatrix((row, col) -> {
 				var isEvenRow = row % 2 == 0;
@@ -309,6 +337,8 @@ class PlayState extends FlxState
 				}
 			}, width, height)	
 		);
+
+		grid.createLayer(constructMatrix((row, col) -> 0, width, height));
 
 		// set starting village
 		var startingVillage = new Location(
@@ -427,14 +457,14 @@ class PlayState extends FlxState
 		if (selected != null) {
 			// render selections
 			if (gameState == 'playing') {
+				selected.setTile(grid.layers[UPPER_LAYER], TileTypes.SELECTOR);
+
 				var fogTile = selected.getTile(grid.layers[FOG_LAYER]);
 				if (fogTile != TileTypes.EMPTY) {
 					infoTitleText.text = "Fogged";
 					infoDescriptionText.text = UNSELECTED_INFO;
 					return;
 				}
-
-				selected.setTile(grid.layers[UPPER_LAYER], TileTypes.SELECTOR);
 	
 				var selectedTile = selected.getTile(grid.layers[TILES_LAYER]);
 				infoTitleText.text = TileTypeInfo[selectedTile].name;
@@ -481,8 +511,21 @@ class PlayState extends FlxState
 		clearFog();
 		
 		removeCost(tileInfo);
+
+		// do on place effect
 		
 		return true;
+	}
+
+	function harvest(origin:Location, range:Range, targets:Array<Int>) {
+		// origin == starting location of the harvest action
+		// targets == array of tile types
+		// range == radius + shape
+
+		// find all locations in range or origin
+		// find tiles in those locations that match one of the targets
+		// add resource values of the found tiles to current totals
+		// replace target location with new decomposition tile (e.g. EMPTY for now, but maybe STUMP in the future)
 	}
 
 	function canAfford(tileInfo: TileInfo): Bool {
@@ -514,9 +557,6 @@ class PlayState extends FlxState
 
 	function removeCost(tileInfo:TileInfo): Void {
 		var cost = tileInfo.cost;
-
-		trace(tileInfo);
-		trace(cost);
 
 		if (cost == null) {
 			return;
@@ -554,16 +594,11 @@ class PlayState extends FlxState
 
 		var buildingRanges = [];
 
-		var rangeFinders = [
-			'diamond' => createDiamond,
-			'square' => createSquare
-		];
-
 		// find radius around each building
 		for (buildingLocation in buildingLocations) {
 			var building = buildingLocation.getTile(grid.layers[TILES_LAYER]);
 			var range = TileTypeInfo[building].range;
-			var tilesInRange = rangeFinders[range.shape](buildingLocation, range.value);
+			var tilesInRange = getLocationsInRange(buildingLocation, range);
 
 			buildingRanges.push(tilesInRange);
 		}

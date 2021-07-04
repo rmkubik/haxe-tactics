@@ -35,13 +35,17 @@ var TileTypes = {
 	SELECTOR: 21,
 	TREE: 63,
 	BUSH_BERRY: 64,
+	BUSH: 80,
 	STONE: 61,
+	STONE_MINED: 70,
 	GOLD: 62,
+	GOLD_MINED: 100,
 	TOWER: 72,
 	VILLAGE: 74,
 	GRANARY: 76,
 	CAMP: 77,
-	WOODCUTTERS: 86
+	WOODCUTTERS: 86,
+	STUMP: 90
 }
 
 typedef Cost = {
@@ -57,11 +61,15 @@ typedef TileInfo = {
 	?range: Range,
 	?resource: {
 		type: String,
-		value: Int
+		value: Int,
+		harvested: Int
 	},
 	?effect: {
 		func: String,
-		?args: Array<Any>
+		?args: {
+			?range: Range,
+			?targets: Array<Int>
+		}
 	}
 }
 
@@ -86,28 +94,32 @@ var TileTypeInfo:Map<Int, TileInfo> = [
 		name: 'Tree',
 		resource: {
 			value: 10,
-			type: 'wood'
+			type: 'wood',
+			harvested: TileTypes.STUMP
 		} 
 	},
 	TileTypes.BUSH_BERRY => {
 		name: 'Berries',
 		resource: {
 			value: 5,
-			type: 'food'
+			type: 'food',
+			harvested: TileTypes.BUSH
 		} 
 	},
 	TileTypes.STONE => {
 		name: 'Stone',
 		resource: {
 			value: 20,
-			type: 'stone'
+			type: 'stone',
+			harvested: TileTypes.STONE_MINED
 		} 
 	},
 	TileTypes.GOLD => {
 		name: 'Gold',
 		resource: {
 			value: 20,
-			type: 'gold'
+			type: 'gold',
+			harvested: TileTypes.GOLD_MINED
 		} 
 	},
 	TileTypes.TOWER => {
@@ -139,6 +151,16 @@ var TileTypeInfo:Map<Int, TileInfo> = [
 		range: {
 			value: 1,
 			shape: Shape.SQUARE
+		},
+		effect: {
+			func: 'harvest',
+			args: {
+				range: {
+					value: 1,
+					shape: Shape.SQUARE
+				},
+				targets: [TileTypes.BUSH_BERRY]
+			}
 		}
 	},
 	TileTypes.CAMP => {
@@ -149,6 +171,16 @@ var TileTypeInfo:Map<Int, TileInfo> = [
 		range: {
 			value: 1,
 			shape: Shape.SQUARE
+		},
+		effect: {
+			func: 'harvest',
+			args: {
+				range: {
+					value: 1,
+					shape: Shape.SQUARE
+				},
+				targets: [TileTypes.STONE, TileTypes.GOLD]
+			}
 		}
 	},
 	TileTypes.WOODCUTTERS => {
@@ -162,14 +194,26 @@ var TileTypeInfo:Map<Int, TileInfo> = [
 		},
 		effect: {
 			func: 'harvest',
-			args: [
-				{
+			args: {
+				range: {
 					value: 1,
 					shape: Shape.SQUARE
 				},
-				[TileTypes.TREE]
-			]
+				targets: [TileTypes.TREE]
+			}
 		}
+	},
+	TileTypes.STUMP => {
+		name: 'Stump',
+	},
+	TileTypes.BUSH => {
+		name: 'Bush',
+	},
+	TileTypes.STONE_MINED => {
+		name: 'Stone',
+	},
+	TileTypes.GOLD_MINED => {
+		name: 'Gold',
 	},
 ];
 
@@ -512,13 +556,24 @@ class PlayState extends FlxState
 		
 		removeCost(tileInfo);
 
-		// do on place effect
-		harvest(location, TileTypeInfo[TileTypes.WOODCUTTERS].range, [TileTypes.TREE]);
+		if (tileInfo.effect != null) {
+			triggerEffect(location, tileInfo);
+		}
 		
 		return true;
 	}
 
-	function harvest(origin:Location, range:Range, targets:Array<Int>) {
+	function triggerEffect(origin:Location, tileInfo:TileInfo): Void {
+		var effect = tileInfo.effect;
+
+		var effectMap = [
+			'harvest' => harvest
+		];
+
+		effectMap[effect.func](origin, effect.args.range, effect.args.targets);
+	}
+
+	function harvest(origin:Location, range:Range, targets:Array<Int>): Void {
 		// origin == starting location of the harvest action
 		// targets == array of tile types
 		// range == radius + shape
@@ -532,11 +587,17 @@ class PlayState extends FlxState
 			return targets.contains(tile);
 		});
 
-		trace(targetLocations);
+		// TODO: We need to see each of these steps animated indiviually
+		// we don't even get to see newly revealed trees before we
+		// immediately chop them down.
+		for (targetLocation in targetLocations) {
+			var tileType = targetLocation.getTile(grid.layers[TILES_LAYER]);
+			var tileInfo = TileTypeInfo[tileType];
+			
+			addResources(tileInfo);
 
-		// add resource values of the found tiles to current totals
-
-		// replace target location with new decomposition tile (e.g. EMPTY for now, but maybe STUMP in the future)
+			targetLocation.setTile(grid.layers[TILES_LAYER], tileInfo.resource.harvested);
+		}
 	}
 
 	function canAfford(tileInfo: TileInfo): Bool {
@@ -587,6 +648,21 @@ class PlayState extends FlxState
 
 		if (cost.stone != null) {
 			stone -= cost.stone;
+		}
+	}
+
+	function addResources(tileInfo:TileInfo): Void {
+		var resource = tileInfo.resource;
+
+		if (resource == null) {
+			return;
+		}
+		
+		switch (resource.type) {
+			case 'food': food += resource.value;
+			case 'wood': wood += resource.value;
+			case 'gold': gold += resource.value;
+			case 'stone': stone += resource.value;
 		}
 	}
 

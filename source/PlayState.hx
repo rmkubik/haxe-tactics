@@ -144,6 +144,8 @@ class PlayState extends FlxState
 					// gameState = 'playing';
 					if (tryPlaceBuilding(location)) {
 						// make time pass
+						trace('placed building');
+						ageTrees(location);
 					}
 					gameState = 'playing';
 				} else if (gameState == 'playing') {					
@@ -516,22 +518,28 @@ class PlayState extends FlxState
 		}
 	}
 
-	// function ageTrees() {
-	// 	var dimensions = grid.getDimensions();
-	// 	var tileData = grid.layers[TILES_LAYER].getData();
-	// 	var matrix = covertArrayToMatrix(tileData, dimensions.width);
+	function ageTrees(placedLocation: Location) {
+		var dimensions = grid.getDimensions();
+		var tileData = grid.layers[TILES_LAYER].getData();
+		var matrix = covertArrayToMatrix(tileData, dimensions.width);
 
-	// 	forEachMatrix(location -> {
-	// 		var tile = location.getTile(grid.layers[TILES_LAYER]);
+		var tileLayer = grid.layers[TILES_LAYER];
+		
+		forEachMatrix(location -> {
+			if (location.isEqual(placedLocation)) {
+				// skip this one, it was just placed
+				return;
+			}
 
-	// 		switch (tile) {
-	// 			case TileTypes.SAPLING_NEW:
-	// 				//asdf;
-	// 			case TileTypes.SAPLING_OLD:
-	// 				//asdfl
-	// 			default:
-					
-	// 		}
-	// 	}, matrix);
-	// }
+			var tile = location.getTile(tileLayer);
+
+			switch (tile) {
+				case TileTypes.SAPLING_NEW:
+					location.setTile(tileLayer, TileTypes.SAPLING_OLD);
+				case TileTypes.SAPLING_OLD:
+					location.setTile(tileLayer, TileTypes.TREE);
+				default: {}
+			}
+		}, matrix);
+	}
 }

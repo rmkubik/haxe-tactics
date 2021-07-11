@@ -1,4 +1,5 @@
 import Arrays.removeDuplicates;
+import TileTypes;
 import flixel.tile.FlxTilemap;
 
 class Location { 
@@ -23,14 +24,21 @@ class Location {
 
 	public function getTile(tiles:FlxTilemap) {
 		var locationXY = this.getXY();
+		var tileId = tiles.getTile(locationXY.x, locationXY.y);
+		var tileType = findTileTypeById(tileId);
+
+		if (tileType == null) {
+			trace('Could not locate tileType for tileId: "$tileId"');
+		}
 		
-		return tiles.getTile(locationXY.x, locationXY.y);
+		return tileType;
 	}
 
-	public function setTile(tiles:FlxTilemap, value:Int) {
+	public function setTile(tiles:FlxTilemap, value:TileTypes) {
 		var locationXY = this.getXY();
+		var tileId = TileTypeInfo[value].id;
 		
-		tiles.setTile(locationXY.x, locationXY.y, value);
+		tiles.setTile(locationXY.x, locationXY.y, tileId);
 	}
 
 	public function isInBounds(tiles:FlxTilemap) {
@@ -63,14 +71,34 @@ function constructMatrix(construct, width, height) {
 }
 
 function forEachMatrix(sideEffect: (location:Location) -> Void, matrix:Array<Array<Any>>): Void {
-	var width = matrix.length;
-	var height = matrix[0].length;
+	var height = matrix.length;
+	var width = matrix[0].length;
 	
 	for (row in 0...height) {		
 		for (col in 0...width) {
 			sideEffect(new Location(row, col));
 		}
 	}
+}
+
+function mapMatrix<InputType, OutputType>(
+	map: (location:Location) -> OutputType,
+	matrix:Array<Array<InputType>>
+): Array<Array<OutputType>> {
+	var height = matrix.length;
+	var width = matrix[0].length;
+
+	var newMatrix: Array<Array<OutputType>> = [];
+	
+	for (row in 0...height) {
+		newMatrix[row] = [];
+		
+		for (col in 0...width) {
+			newMatrix[row][col] = map(new Location(row, col));
+		}
+	}
+
+	return newMatrix;
 }
 
 function covertArrayToMatrix<T>(array:Array<T>, width): Array<Array<T>> {

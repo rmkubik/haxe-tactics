@@ -4,6 +4,7 @@ import Arrays.some;
 import Matricies;
 import StringTools;
 import TextRow;
+import TileTypes;
 import flixel.FlxG;
 import flixel.FlxState;
 import flixel.graphics.FlxGraphic;
@@ -29,193 +30,6 @@ function getLocationsInRange(origin:Location, range:Range): Array<Location> {
 	
 	return rangeFinders[range.shape](origin, range.value);
 }
-
-var TileTypes = {
-	EMPTY: 0,
-	SELECTOR: 21,
-	TREE: 63,
-	BUSH_BERRY: 64,
-	BUSH: 80,
-	STONE: 61,
-	STONE_MINED: 70,
-	GOLD: 62,
-	GOLD_MINED: 100,
-	TOWER: 72,
-	VILLAGE: 74,
-	GRANARY: 76,
-	CAMP: 77,
-	WOODCUTTERS: 86,
-	STUMP: 90
-}
-
-typedef Cost = {
-	?wood:Int,
-	?food:Int,
-	?stone:Int,
-	?gold:Int,
-}
-
-typedef TileInfo = {
-	name: String, 
-	?cost: Cost,
-	?range: Range,
-	?resource: {
-		type: String,
-		value: Int,
-		harvested: Int
-	},
-	?effect: {
-		func: String,
-		?args: {
-			?range: Range,
-			?targets: Array<Int>
-		}
-	}
-}
-
-enum Shape {
-	SQUARE;
-	DIAMOND;
-}
-
-typedef Range = {
-	value: Int,
-	shape: Shape
-}
-
-var TileTypeInfo:Map<Int, TileInfo> = [
-	TileTypes.EMPTY => {
-		name: 'Empty',
-	},
-	TileTypes.SELECTOR => {
-		name: 'Empty',
-	},
-	TileTypes.TREE => {
-		name: 'Tree',
-		resource: {
-			value: 10,
-			type: 'wood',
-			harvested: TileTypes.STUMP
-		} 
-	},
-	TileTypes.BUSH_BERRY => {
-		name: 'Berries',
-		resource: {
-			value: 5,
-			type: 'food',
-			harvested: TileTypes.BUSH
-		} 
-	},
-	TileTypes.STONE => {
-		name: 'Stone',
-		resource: {
-			value: 20,
-			type: 'stone',
-			harvested: TileTypes.STONE_MINED
-		} 
-	},
-	TileTypes.GOLD => {
-		name: 'Gold',
-		resource: {
-			value: 20,
-			type: 'gold',
-			harvested: TileTypes.GOLD_MINED
-		} 
-	},
-	TileTypes.TOWER => {
-		name: "Tower",
-		cost: {
-			stone: 10,
-		},
-		range: {
-			value: 3,
-			shape: Shape.DIAMOND
-		}
-	},
-	TileTypes.VILLAGE => {
-		name: 'Village',
-		cost: {
-			food: 10,
-			wood: 10,
-		},
-		range: {
-			value: 2,
-			shape: Shape.DIAMOND,
-		}
-	},
-	TileTypes.GRANARY => {
-		name: 'Granary',
-		cost: {
-			wood: 10,
-		},
-		range: {
-			value: 1,
-			shape: Shape.SQUARE
-		},
-		effect: {
-			func: 'harvest',
-			args: {
-				range: {
-					value: 1,
-					shape: Shape.SQUARE
-				},
-				targets: [TileTypes.BUSH_BERRY]
-			}
-		}
-	},
-	TileTypes.CAMP => {
-		name: 'Camp',
-		cost: {
-			wood: 10,
-		},
-		range: {
-			value: 1,
-			shape: Shape.SQUARE
-		},
-		effect: {
-			func: 'harvest',
-			args: {
-				range: {
-					value: 1,
-					shape: Shape.SQUARE
-				},
-				targets: [TileTypes.STONE, TileTypes.GOLD]
-			}
-		}
-	},
-	TileTypes.WOODCUTTERS => {
-		name: 'Choppers',
-		cost: {
-			wood: 10,
-		},
-		range: {
-			value: 1,
-			shape: Shape.SQUARE
-		},
-		effect: {
-			func: 'harvest',
-			args: {
-				range: {
-					value: 1,
-					shape: Shape.SQUARE
-				},
-				targets: [TileTypes.TREE]
-			}
-		}
-	},
-	TileTypes.STUMP => {
-		name: 'Stump',
-	},
-	TileTypes.BUSH => {
-		name: 'Bush',
-	},
-	TileTypes.STONE_MINED => {
-		name: 'Stone',
-	},
-	TileTypes.GOLD_MINED => {
-		name: 'Gold',
-	},
-];
 
 function computeCostString(tileInfo:TileInfo): String {
 	var cost = tileInfo.cost;
@@ -293,7 +107,7 @@ class PlayState extends FlxState
 	var infoTitleText:FlxText;
 	var infoDescriptionText:FlxText;
 	var buildGrid:Grid;
-	var buildings:Array<Int> = [TileTypes.VILLAGE, TileTypes.GRANARY, TileTypes.CAMP, TileTypes.WOODCUTTERS, TileTypes.TOWER];
+	var buildings:Array<TileTypes> = [TileTypes.VILLAGE, TileTypes.GRANARY, TileTypes.CAMP, TileTypes.WOODCUTTERS, TileTypes.TOWER, TileTypes.SAPLING_NEW];
 
 
 	override public function create()
@@ -329,6 +143,7 @@ class PlayState extends FlxState
 					
 					// gameState = 'playing';
 					if (tryPlaceBuilding(location)) {
+						// make time pass
 					}
 					gameState = 'playing';
 				} else if (gameState == 'playing') {					
@@ -346,19 +161,27 @@ class PlayState extends FlxState
 
 				// 2 color checkers
 				if (isEvenRow && isEvenCol) {
-					return 22;
+					return TileTypes.GROUND_1;
 				} else if (isEvenRow && !isEvenCol) {
-					return 23;
+					return TileTypes.GROUND_2;
 				} else if (!isEvenRow && isEvenCol) {
-					return 23;
+					return TileTypes.GROUND_2;
 				} else {
-					return 22;
+					return TileTypes.GROUND_1;
 				}
 			}, width, height)	
 		);
 
 		var tileData = constructMatrix(
-			(row, col) -> pickRandomWeighted(rand, [TileTypes.EMPTY, TileTypes.TREE, TileTypes.BUSH_BERRY, TileTypes.STONE, TileTypes.GOLD], [75, 17, 6, 2, 1]),
+			(row, col) -> {
+				var choice = pickRandomWeighted(
+					rand,
+					[TileTypes.EMPTY, TileTypes.TREE, TileTypes.BUSH_BERRY, TileTypes.STONE, TileTypes.GOLD],
+					[75, 17, 6, 2, 1]
+				);
+
+				return choice;
+			},
 			width,
 			height
 		);
@@ -371,18 +194,18 @@ class PlayState extends FlxState
 
 				// 2 color checkers
 				if (isEvenRow && isEvenCol) {
-					return 53;
+					return TileTypes.FOG_1;
 				} else if (isEvenRow && !isEvenCol) {
-					return 54;
+					return TileTypes.FOG_2;
 				} else if (!isEvenRow && isEvenCol) {
-					return 54;
+					return TileTypes.FOG_2;
 				} else {
-					return 53;
+					return TileTypes.FOG_1;
 				}
 			}, width, height)	
 		);
 
-		grid.createLayer(constructMatrix((row, col) -> 0, width, height));
+		grid.createLayer(constructMatrix((row, col) -> TileTypes.EMPTY, width, height));
 
 		// set starting village
 		var startingVillage = new Location(
@@ -423,7 +246,7 @@ class PlayState extends FlxState
 		);
 
 		buildGrid.createLayer([buildings]);
-		buildGrid.createLayer([buildings.map(a -> 0)]);
+		buildGrid.createLayer([buildings.map(a -> TileTypes.EMPTY)]);
 		
 		// info bar on far right
 		var infoPanelWidth = Config.instance.tileSize * 4;
@@ -573,12 +396,7 @@ class PlayState extends FlxState
 		effectMap[effect.func](origin, effect.args.range, effect.args.targets);
 	}
 
-	function harvest(origin:Location, range:Range, targets:Array<Int>): Void {
-		// origin == starting location of the harvest action
-		// targets == array of tile types
-		// range == radius + shape
-
-		// find all locations in range of origin
+	function harvest(origin:Location, range:Range, targets:Array<TileTypes>): Void {
 		var locations:Array<Location> = getLocationsInRange(origin, range);
 
 		// find tiles in those locations that match one of the targets
@@ -697,4 +515,23 @@ class PlayState extends FlxState
 			}
 		}
 	}
+
+	// function ageTrees() {
+	// 	var dimensions = grid.getDimensions();
+	// 	var tileData = grid.layers[TILES_LAYER].getData();
+	// 	var matrix = covertArrayToMatrix(tileData, dimensions.width);
+
+	// 	forEachMatrix(location -> {
+	// 		var tile = location.getTile(grid.layers[TILES_LAYER]);
+
+	// 		switch (tile) {
+	// 			case TileTypes.SAPLING_NEW:
+	// 				//asdf;
+	// 			case TileTypes.SAPLING_OLD:
+	// 				//asdfl
+	// 			default:
+					
+	// 		}
+	// 	}, matrix);
+	// }
 }

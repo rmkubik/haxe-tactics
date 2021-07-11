@@ -1,4 +1,6 @@
 import Matricies.Location;
+import Matricies.mapMatrix;
+import TileTypes.TileTypeInfo;
 import flixel.FlxG;
 import flixel.FlxState;
 import flixel.graphics.FlxGraphic;
@@ -27,7 +29,15 @@ class Grid {
     this.onClick = onClick;
   }
 
-  public function createLayer(tileData) {
+  public function createLayer(tileTypes: Array<Array<TileTypes>>) {
+    var tileData: Array<Array<Int>> = mapMatrix(location -> {
+      // We're using row & col directly because location.getTile
+      // only operates on FlxTilemaps.
+      var tileType = tileTypes[location.row][location.col];
+      
+      return TileTypeInfo[tileType].id;
+    }, tileTypes);
+    
     var tiles = new FlxTilemap();
     tiles.loadMapFrom2DArray(
       tileData,

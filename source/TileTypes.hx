@@ -43,10 +43,7 @@ typedef TileInfo = {
 	},
 	?effect: {
 		func: String,
-		?args: {
-			?range: Range,
-			?targets: Array<TileTypes>
-		}
+		?args: EffectArgs
 	}
 }
 
@@ -58,6 +55,13 @@ enum Shape {
 typedef Range = {
 	value: Int,
 	shape: Shape
+}
+
+typedef EffectArgs = {
+	?range: Range,
+	?targets: Array<TileTypes>,
+	?resource: String,
+	?quantity: Int
 }
 
 var TileTypeInfo:Map<TileTypes, TileInfo> = [
@@ -126,6 +130,13 @@ var TileTypeInfo:Map<TileTypes, TileInfo> = [
 		range: {
 			value: 2,
 			shape: Shape.DIAMOND,
+		},
+		effect: {
+			func: 'modifyResources',
+			args: {
+				resource: 'gold',
+				quantity: 10
+			}
 		}
 	},
 	TileTypes.GRANARY => {

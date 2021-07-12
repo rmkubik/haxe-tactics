@@ -392,13 +392,17 @@ class PlayState extends FlxState
 		var effect = tileInfo.effect;
 
 		var effectMap = [
-			'harvest' => harvest
+			'harvest' => harvest,
+			'modifyResources' => modifyResources
 		];
 
-		effectMap[effect.func](origin, effect.args.range, effect.args.targets);
+		effectMap[effect.func](origin, effect.args);
 	}
 
-	function harvest(origin:Location, range:Range, targets:Array<TileTypes>): Void {
+	function harvest(origin:Location, args:EffectArgs): Void {
+		var range:Range = args.range;
+		var targets:Array<TileTypes> = args.targets;
+		
 		var locations:Array<Location> = getLocationsInRange(origin, range);
 
 		// find tiles in those locations that match one of the targets
@@ -417,6 +421,18 @@ class PlayState extends FlxState
 			addResources(tileInfo);
 
 			targetLocation.setTile(grid.layers[TILES_LAYER], tileInfo.resource.harvested);
+		}
+	}
+
+	function modifyResources(origin:Location, args:EffectArgs): Void {
+		var resource:String = args.resource;
+		var quantity:Int = args.quantity;
+
+		switch (resource) {
+			case 'food': food += quantity;
+			case 'wood': wood += quantity;
+			case 'gold': gold += quantity;
+			case 'stone': stone += quantity;
 		}
 	}
 

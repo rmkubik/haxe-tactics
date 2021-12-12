@@ -220,7 +220,7 @@ class PlayState extends FlxState
 		clearFog();
 
 		// top bar
-		var textWidth = Config.instance.tileSize * 2;
+		var textWidth = Config.instance.tileSize * 3;
 	
 		resourceTextRow = new TextRow(4, textWidth, new FlxPoint(0, 0), this);
 		updateTextBar();
@@ -515,7 +515,7 @@ class PlayState extends FlxState
 			}
 		}, matrix);
 
-		var buildingRanges = [];
+		var buildingRanges:Array<Array<Location>> = [];
 
 		// find radius around each building
 		for (buildingLocation in buildingLocations) {
@@ -557,5 +557,25 @@ class PlayState extends FlxState
 				default: {}
 			}
 		}, matrix);
+	}
+
+	function combineTiles(placedLocation: Location) {
+		// check to see if there are now tiles on the map that should combine
+		// combine them
+		
+		// what is a recipe?
+		// {
+		//	 ingredients: Array<TileTypes>,
+		//	 product: TileTypes
+		// }
+
+		// for every tile in a matrix
+		// - for every recipe
+		// 		- if this tileType in the ingredients array
+		//			- we need to do some kind of floodfill where the depth
+		//				of fill is the length on the ingredients array.
+		//				If a given tile is equal to a not already picked ingredient
+		//				tileType, then mark that tileType as picked.
+		//				If not, this direction can be blocked from the floodfill
 	}
 }

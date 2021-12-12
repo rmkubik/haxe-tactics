@@ -1,6 +1,6 @@
 class Config {
   public var tilesHigh = 10;
-  public var tilesWide = 10;
+  public var tilesWide = 20;
   public var tileSize = 16;
   public var topMargin = 16;
   public var bottomMargin = 32;
